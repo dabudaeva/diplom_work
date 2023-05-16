@@ -1,0 +1,389 @@
+---
+title: "курсач"
+output:
+  html_document: default
+---
+
+загрузка данных и пакеты
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+# загрузка данных
+# school_char <- read.csv('/Users/Aleksandra/Desktop/курсач/final.csv')
+data <- foreign::read.spss("/Users/Aleksandra/Desktop/диплом/калуга/dropbox/Kaluga_индивид.данные.sav",
+                           use.value.labels = F,
+                           to.data.frame = T)
+# пакеты
+library(dplyr)
+library(stringr)
+library(nFactors)
+library(psych)
+library(ggplot2)
+library(lavaan)
+
+database <- data.frame(c(1:nrow(data)))
+names(database) <- "X"
+
+for(i in 1:ncol(data)){
+  if(length(unique(data[,i]))!=1){
+    t <- as.data.frame(data[i])
+    names(t[1]) <- names(data[i])
+    Hmisc::label(t[[1]]) <- attr(data,'variable.labels')[[i]]
+    database <- cbind(database,t[1])
+    rm(t)
+  }else{}
+}
+
+rm(i,data)
+
+database <- dplyr::select(database, -X, -Start, -End, -IP)
+
+
+
+modif <- dplyr::select(database,
+                       ID_student,
+                       SchoolConnectedness,
+                       TeachersEffectiveness,
+                       TeachersRelations,
+                       TeachersGeneral,
+                       SelfEsteemMath,
+                       SelfEsteemHuman,
+                       BullyingIndivid,
+                       BullyingCollect,
+                       Cyberbulling,
+                       Engagement,
+                       Antischool,
+                       MotivationGeneral,
+                       SchoolConduct,
+                       StudentsRelations,
+                       Agemonth,
+                       MeanClassAge,
+                       Agedelta)
+
+```
+
+
+независимые переменные
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+bullying <- dplyr::select(database, Q21_1,Q21_2,Q21_3,Q21_4,Q21_5,Q21_6,Q21_7,Q21_9,Q21_10)
+self_esteem_H <- dplyr::select(database, Q5_10,Q7_2,REV16_10,REV20_11)
+self_esteem_M <- dplyr::select(database, REV5_9,REV7_8,Q16_7,Q20_10)
+engagement <- dplyr::select(database, Q5_6, Q7_5, Q20_1, Q20_8)
+antischool <- dplyr::select(database, Q5_2, Q7_10, Q20_2, Q20_9)
+school_connectedness <- dplyr::select(database, Q5_1,Q7_1,Q7_3,Q7_4,REV7_6,Q7_9,Q16_4,Q16_6,REV16_9)
+students_relations <- dplyr::select(database, Q5_3, Q5_8, REVQ20_4,Q20_12)
+
+independent <- data.frame(ID_student=database$ID_student)
+
+engagement$Q5_2 <- as.numeric(recode(antischool$Q5_2, `1` = "4", `2` = "3", `3` = "2", `4` = "1"))
+engagement$Q7_10 <- as.numeric(recode(antischool$Q7_10, `1` = "4", `2` = "3", `3` = "2", `4` = "1"))
+engagement$Q20_2 <- as.numeric(recode(antischool$Q20_2, `1` = "4", `2` = "3", `3` = "2", `4` = "1"))
+engagement$Q20_9 <- as.numeric(recode(antischool$Q20_9, `1` = "4", `2` = "3", `3` = "2", `4` = "1"))
+
+# independent <- data.frame(int_access=as.numeric(database$Q8_3),
+#                           online_vk=as.numeric(database$Q12))
+# independent[independent$online_vk==7,2] <- 0
+# independent[is.na(independent$int_access),1] <- 0
+# independent$int_access <- ifelse(independent$int_access==1,0,1)
+
+names(bullying) <- c("Q1",  "Q2",  "Q3",  "Q4",  "Q5",  "Q6",  "Q7",  "Q9",  "Q10")
+fit1 <- fa(bullying, nfactors = 1, scores ="regression", missing=T, fm="ml",cor="cor")
+independent$bullying <- fit1$scores
+independent$bullying <- independent$bullying-min(independent$bullying)
+
+names(self_esteem_H) <- c("Q1",  "Q2",  "Q3",  "Q4")
+fit2 <- fa(self_esteem_H, nfactors = 1, scores ="regression", missing=T, fm="ml",cor="cov")
+independent$self_esteem_H <- fit2$scores
+independent$self_esteem_H <- as.vector(independent$self_esteem_H-min(independent$self_esteem_H))
+
+names(self_esteem_M) <- c("Q1",  "Q2",  "Q3",  "Q4")
+fit3 <- fa(self_esteem_M, nfactors = 1, scores ="regression", missing=T, fm="ml",cor="cov")
+independent$self_esteem_M <- fit3$scores
+independent$self_esteem_M <- as.vector(independent$self_esteem_M-min(independent$self_esteem_M))
+
+names(engagement) <- c("Q1",  "Q2",  "Q3",  "Q4",  "Q5", "Q6",  "Q7",  "Q8")
+fit4 <- fa(engagement, nfactors = 1, scores ="regression", missing=T, fm="ml",cor="cov")
+independent$engagement <- fit4$scores
+independent$engagement <- as.vector(independent$engagement-min(independent$engagement))
+
+# names(antischool) <- c("Q1",  "Q2",  "Q3",  "Q4")
+# fit5 <- fa(antischool, nfactors = 1, rotate = "oblimin", scores ="regression", missing=T, fm="wls",cor="mixed")
+# independent$antischool <- fit5$scores
+# independent$antischool <- as.vector(independent$antischool-min(independent$antischool))
+
+names(school_connectedness) <- c("Q1",  "Q2",  "Q3",  "Q4",  "Q5",  "Q6",  "Q7",  "Q8",  "Q9")
+fit6 <- fa(school_connectedness, nfactors = 1, scores ="regression", missing=T, fm="ml",cor="cor")
+independent$school_connectedness <- fit6$scores
+independent$school_connectedness <- as.vector(independent$school_connectedness-min(independent$school_connectedness))
+
+names(students_relations) <- c("Q1",  "Q2",  "Q3", "Q4")
+fit7 <- fa(students_relations, nfactors = 1, scores ="regression", missing=T,fm="ml",cor="cor")
+independent$students_relations <- fit7$scores
+independent$students_relations <- as.vector(independent$students_relations-min(independent$students_relations))
+
+rm(bullying, self_esteem_H, self_esteem_M, engagement, antischool, school_connectedness, students_relations)
+
+par(mfrow=c(2,3))
+fa.diagram(fit1,main="Bullying") # BULLYING
+fa.diagram(fit2,main="Self esteem H") # SELF ESTEEM H
+fa.diagram(fit3,main="Self esteem M") # SELF ESTEEM M
+fa.diagram(fit4,main="Engagement") # ENGAGEMENT
+fa.diagram(fit6,main="School connectedness") # school_connectedness
+fa.diagram(fit7,main="Students relations") # students_relations
+dev.off()
+
+rm(fit1, fit2, fit3,fit4,fit6, fit7)
+
+```
+
+зависимые переменные
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+dependent <- dplyr::select(database, Q15_1,Q15_2,Q15_3)
+# dependent <- as.data.frame(apply(dependent,2,as.numeric))
+# 
+# cor <- polychoric(dependent)
+# fa.parallel(cor$rho, n.obs=nrow(dependent), fa="fa", n.iter=200)
+# 
+# fit <- fa(dependent, nfactors = 1, rotate = "oblimin", scores ="regression", missing=T, fm="wls",cor="mixed")
+# fa.diagram(fit) #loadings
+# # Tucker Lewis Index of factoring reliability =  -Inf
+# dependent$cyberbullying <- fit$scores
+# dependent$cyberbullying <- dependent$cyberbullying-min(dependent$cyberbullying)
+
+dependent$Q15_1 <- ifelse(dependent$Q15_1=="0"| dependent$Q15_1=="1", "0","1")
+dependent$Q15_2 <- ifelse(dependent$Q15_2=="0"|dependent$Q15_2=="1", "0","1")
+dependent$Q15_3 <- ifelse(dependent$Q15_3=="0"|dependent$Q15_3=="1", "0","1")
+
+dependent$cyberbullying <- ifelse(dependent$Q15_1=="0" & dependent$Q15_2=="0" & dependent$Q15_3=="0", "0", "1")
+
+dependent <- as.data.frame(apply(dependent,2,as.numeric))
+
+dependent$Q15_1 <- NULL
+dependent$Q15_2 <- NULL
+dependent$Q15_3 <- NULL
+
+rm(cor)
+```
+
+контрольные переменные
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+control <- data.frame(gender=database$Q29)
+control$gender <- factor(control$gender, labels = c("мужской", "женский"))
+control$gender <- ifelse(control$gender=="женский",1,0) # 1 <- female
+control$class <- as.numeric(as.vector(database$Q_3))
+control$ethnicity <- as.numeric(as.vector(database$Q24))
+control$ethnicity <- as.numeric(ifelse(control$ethnicity=="1", 1, 0)) # 1 <-  russian
+```
+
+
+```{r}
+data <- cbind(dependent, control, independent)
+data$ID_student <- NULL
+data <- as.data.frame(apply(data, 2, as.vector))
+rm(database, fit)
+
+data2 <- data
+data2$cyberbullying <- as.ordered(as.factor(data2$cyberbullying))
+data2$gender <- as.ordered(as.factor(data2$gender))
+data2$class <- as.ordered(as.factor(data2$class))
+data2$ethnicity <- as.ordered(as.factor(data2$ethnicity))
+data <- data2
+
+data2 <- data
+data2$bullying <- (data2$bullying - mean(data2$bullying))/sd(data2$bullying)
+data2$self_esteem_H <- (data2$self_esteem_H - mean(data2$self_esteem_H))/sd(data2$self_esteem_H)
+data2$self_esteem_M <- (data2$self_esteem_M - mean(data2$self_esteem_M))/sd(data2$self_esteem_M)
+data2$engagement <- (data2$engagement - mean(data2$engagement))/sd(data2$engagement)
+data2$school_connectedness <- (data2$school_connectedness - mean(data2$school_connectedness))/
+  sd(data2$school_connectedness)
+data2$students_relations <- (data2$students_relations - mean(data2$students_relations))/
+  sd(data2$students_relations)
+
+rm(control, dependent, independent, modif)
+```
+
+
+описательная стат
+
+```{r}
+age <- database$Q28_ye
+table(age)
+mean(table(age))
+sd(table(age))
+
+data <- data2
+
+table(data$class)
+mean(table(data$class))
+sd(table(data$class))
+
+ethnic <- database$Q24
+table(ethnic)
+mean(table(ethnic))
+sd(table(ethnic))
+
+round((sort(table(ethnic))/27904)*100, 0)
+```
+
+дескриптивный анализ
+
+```{r}
+bullied <- subset(data2, cyberbullying=="1")
+table(bullied$gender)
+round(table(bullied$gender)/table(data2$gender)*100,1)
+
+table(bullied$class)
+round(table(bullied$class)/table(data2$class)*100,1)
+
+table(bullied$ethnicity)
+round(table(bullied$ethnicity)/table(data2$ethnicity)*100,1)
+
+summary(bullied[,6:ncol(bullied)])
+round(sapply(bullied[,6:ncol(bullied)], sd),3)
+
+test <- as.matrix(table(data2$cyberbullying, data2$gender))
+chisq.test(test) # independent
+
+test <- as.matrix(table(data2$cyberbullying, data2$class))
+chisq.test(test) # dependent
+
+test <- as.matrix(table(data2$cyberbullying, data2$ethnicity))
+chisq.test(test) # independent
+```
+
+
+
+
+
+```{r}
+
+t <- dplyr::select(data2, gender, class, ethnicity, self_esteem_H, self_esteem_M, engagement, school_connectedness, students_relations, bullying, cyberbullying)
+
+cor <- lavCor(t, output="cor")
+
+cor_t <- as.data.frame(cor)
+cor_t[cor_t^2<0.05] <- NA
+cor_t[cor_t^2>0.05] <- "значимо"
+
+rm(cor, cor_t)
+
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+t2 <- as.data.frame(apply(t, 2, as.numeric))
+
+fit <- lm(cyberbullying_f~., data = t2)
+summary(fit)
+
+t <- data
+t$gender <- as.character(t$gender)
+t$class <- as.character(t$class)
+t$ethnicity <- as.character(t$ethnicity)
+t$self_esteem_H <- t$self_esteem_H/max(t$self_esteem_H)
+t$self_esteem_M <- t$self_esteem_M/max(t$self_esteem_M)
+t$engagement <- t$engagement/max(t$engagement)
+t$school_connectedness <- t$school_connectedness/max(t$school_connectedness)
+t$students_relations <- t$students_relations/max(t$students_relations)
+t$bullying <- t$bullying/max(t$bullying)
+
+```
+
+
+
+```{r}
+par(mfrow=c(2,3))
+cdplot(cyberbullying~self_esteem_H, data=t, main = "self_esteem_H")
+cdplot(cyberbullying~self_esteem_M, data=t, main = "self_esteem_M")
+cdplot(cyberbullying~engagement, data=t, main = "engagement")
+cdplot(cyberbullying~school_connectedness, data=t, main = "school_connectedness")
+cdplot(cyberbullying~students_relations, data=t, main = "students_relations")
+cdplot(cyberbullying~bullying, data=t, main = "bullying")
+dev.off()
+```
+
+
+
+```{r}
+##Estimate the logit model and check its overall fit
+fit1 <- glm(cyberbullying~gender+class+ethnicity, data = t, family = "binomial")
+round(summary(fit1)$coefficients,2)
+round(exp(coef(fit1)),2)
+r2(fit1)
+
+fit2 <- glm(cyberbullying~gender+class+ethnicity+self_esteem_H+self_esteem_M, data = t, family = "binomial")
+round(summary(fit2)$coefficients,2)
+summary(fit2)
+round(exp(coef(fit2)),2)
+r2(fit2)
+
+fit3 <- glm(cyberbullying~gender+class+ethnicity+engagement, data = t, family = "binomial")
+round(summary(fit3)$coefficients,2)
+summary(fit3)
+round(exp(coef(fit3)),2)
+r2(fit3)
+
+fit4 <- glm(cyberbullying~gender+class+ethnicity+school_connectedness, data = t, family = "binomial")
+round(summary(fit4)$coefficients,2)
+summary(fit4)
+round(exp(coef(fit4)),2)
+r2(fit4)
+
+fit5 <- glm(cyberbullying~gender+class+ethnicity+students_relations, data = t, family = "binomial")
+round(summary(fit5)$coefficients,2)
+summary(fit5)
+round(exp(coef(fit5)),2)
+r2(fit5)
+
+fit6 <- glm(cyberbullying~gender+class+ethnicity+bullying, data = t, family = "binomial")
+round(summary(fit6)$coefficients,2)
+summary(fit6)
+round(exp(coef(fit6)),2)
+r2(fit6)
+
+
+round(apply(t[,5:10],2,mean),2)
+
+
+
+
+
+
+fit3 <- glm(cyberbullying~gender+class+ethnicity+self_esteem_H+self_esteem_M+engagement, data = t, family = "binomial")
+round(summary(fit3)$coefficients,2)
+summary(fit3)
+round(exp(coef(fit3)),2)
+r2(fit3)
+
+fit4 <- glm(cyberbullying~gender+class+ethnicity+self_esteem_H+self_esteem_M+engagement+school_connectedness, data = t, family = "binomial")
+round(summary(fit4)$coefficients,2)
+summary(fit4)
+round(exp(coef(fit4)),2)
+r2(fit4)
+
+fit5 <- glm(cyberbullying~gender+class+ethnicity+self_esteem_H+self_esteem_M+engagement+school_connectedness+students_relations, data = t, family = "binomial")
+round(summary(fit5)$coefficients,2)
+summary(fit5)
+round(exp(coef(fit5)),2)
+r2(fit5)
+
+fit6 <- glm(cyberbullying~gender+class+ethnicity+self_esteem_H+self_esteem_M+engagement+school_connectedness+students_relations+bullying, data = t, family = "binomial")
+round(summary(fit6)$coefficients,2)
+summary(fit6)
+round(exp(coef(fit6)),2)
+r2(fit6)
+
+
+round(apply(t[,5:10],2,mean),2)
+
+
+
+
+
+
+
+
+```
+

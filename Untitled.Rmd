@@ -1,0 +1,157 @@
+
+Зависимости
+
+
+```{r}
+# R2 = 0.08078
+{plot(cyberbulling_mean1~Size, data,
+      xlab="размер школы",
+      ylab = "кибербуллинг (mean)")
+  abline(lm(cyberbulling_mean1~Size, data),col="blue")
+  legend("topright",c("R2 = 0.08078"),box.lty = 0,bg="transparent")}
+
+# Манна-Уитни
+# wilcox.test(data$cyberbulling_mean1, data$city_type)
+# W = 60512, p-value < 2.2e-16
+{boxplot(cyberbulling_mean1~as.factor(city_type), data,
+        xlab=" населенного пункта",
+        ylab = "кибербуллинг (mean)")
+  legend("topright",c("W = 60512", "p-value < 2.2e-16"),box.lty = 0,bg="transparent")}
+
+# Краскела-Уоллиса
+# kruskal.test(data$cyberbulling_mean1,data$school_type)
+# Kruskal-Wallis chi-squared = 11.704, df = 2, p-value = 0.002875
+{boxplot(cyberbulling_mean1~as.factor(school_type), data,
+        xlab="тип школы",
+        ylab = "кибербуллинг (mean)")
+  legend("topright",c("Kruskal-Wallis X2 = 11.704","p-value = 0.002875"),box.lty = 0,bg="transparent")}
+
+# R2 = 0.04854
+{plot(cyberbulling_mean1~ISEIfamily, data,
+      xlab="ISEI",
+      ylab = "кибербуллинг (mean)")
+  abline(lm(cyberbulling_mean1~ISEIfamily, data),col="blue")
+  legend("topright",c("R2 = 0.04854"),box.lty = 0,bg="transparent")}
+
+# R2 = 0.5666
+{plot(cyberbulling_mean1~SchoolConnectedness_mean1, data,
+      xlab="положительное отношение к школе (mean)",
+      ylab = "кибербулли (mean)")
+  abline(lm(cyberbulling_mean1~SchoolConnectedness_mean1, data),col="blue")
+  legend("topright",c("R2 = 0.5666"),box.lty = 0,bg="transparent")}
+
+# R2 = 0.508
+{plot(cyberbulling_mean1~TeachersGeneral_mean1, data,
+      xlab="положительн оценка учителей (mean)",
+      ylab = "кибербуллинг (mean)")
+  abline(lm(cyberbulling_mean1~TeachersGeneral_mean1, data),col="blue")
+  legend("topright",c("R2 = 0.508"),box.lty = 0,bg="transparent")}
+
+# R2 = 0.2938
+{plot(cyberbulling_mean1~SelfEsteemMath_mean1, data,
+      xlab="Self-esteem Math (mean)",
+      ylab = "кибербуллинг (mean)")
+  abline(lm(cyberbulling_mean1~SelfEsteemMath_mean1, data),col="blue")
+  legend("topright",c("R2 = 0.2938"),box.lty = 0,bg="transparent")}
+
+# R2 = 0.1607
+{plot(cyberbulling_mean1~SelfEsteemHuman_mean1, data,
+      xlab="Self-esteem Human (mean)",
+      ylab = "кибербуллинг (mean)")
+  abline(lm(cyberbulling_mean1~SelfEsteemHuman_mean1, data),col="blue")
+  legend("topright",c("R2 = 0.1607"),box.lty = 0,bg="transparent")}
+
+# R2 = 0.363
+{plot(cyberbulling_mean1~MotivationGeneral_mean1, data,
+      xlab="мотивация (mean)",
+      ylab = "кибербуллинг (mean)")
+  abline(lm(cyberbulling_mean1~MotivationGeneral_mean1, data),col="blue")
+  legend("topright",c("R2 = 0.363"),box.lty = 0,bg="transparent")}
+
+# R2 = 0.6236
+{plot(cyberbulling_mean1~bulling_collect_mean1, data,
+      xlab="агрессивная подростковая среда (mean)",
+      ylab = " (mean)")
+  abline(lm(cyberbulling_mean1~bulling_collect_mean1, data),col="blue")
+  legend("topright",c("R2 = 0.6236"),box.lty = 0,bg="transparent")}
+
+# R2 = 0.581
+{plot(cyberbulling_mean1~bulling_ind_mean1, data,
+      xlab="опыт буллинга (mean)",
+      ylab = "кибербул (mean)")
+  abline(lm(cyberbulling_mean1~bulling_ind_mean1, data),col="blue")
+  legend("topright",c("R2 = 0.581"),box.lty = 0,bg="transparent")}
+
+# R2 = 0.5685
+{plot(cyberbulling_mean1~SchoolConduct_mean1, data,
+      xlab="дисциплина (mean)",
+      ylab = "кибербуллинг (mean)")
+  abline(lm(cyberbulling_mean1~SchoolConduct_mean1, data),col="blue")
+  legend("topright",c("R2 = 0.5685"),box.lty = 0,bg="transparent")}
+
+```
+
+
+
+```{r}
+data <- readxl::read_excel("~/Desktop/диплом/дип_анализ/data/data.xlsx")
+library(dplyr)
+library(stringr)
+
+ses1 <- select(data,ID_student, Edu_Dad, Edu_Mom)
+
+ses <- ses1
+ses$parents <- ifelse(ses$Edu_Dad=="нет этого родителя" | ses$Edu_Mom=="нет  родителя", 1, NA)
+ses$parents <- ifelse(ses$Edu_Dad=="нет этого родителя" & ses$Edu_Mom=="нет этого родителя", 0, ses$parents)
+ses$parents <- ifelse(ses$Edu_Dad!="нет этого родителя" & ses$Edu_Mom!=" этого родителя", 2, ses$parents)
+
+ses$Edu_Dad[str_detect(ses$Edu_Dad,"есть")] <- 1
+ses$Edu_Dad[str_detect(ses$Edu_Dad,"нет")] <- 0
+ses$Edu_Dad[str_detect(ses$Edu_Dad,"нет этого родителя")] <- 0
+
+ses$Edu_Mom[str_detect(ses$Edu_Mom,"есть")] <- 1
+ses$Edu_Mom[str_detect(ses$Edu_Mom,"нет")] <- 0
+ses$Edu_Mom[str_detect(ses$Edu_Mom,"нет этого родителя")] <- 0
+
+ses <- subset(ses, ses$Edu_Dad!="не знаю")
+ses <- subset(ses, ses$Edu_Mom!="не знаю")
+
+ses$ses <- (as.numeric(ses$Edu_Dad)+as.numeric(ses$Edu_Mom))/ses$parents
+
+new <- plyr::join(ses, ses1, by="ID_student",type = "full")
+
+ses$ses[str_detect(ses$ses,"NaN")] <- NA
+ses <- data.frame(ID_student =ses$ID_student, 
+                  ses = ses$ses,
+                  book = data$question_49)
+
+
+
+# size of classes
+library(dplyr)
+r <- data %>% group_by(ID_school, school_name, class) %>% summarise(c=n())
+length(unique(r$ID_school)) #248
+six <- subset(r, class==6); six$school_name <- NULL
+sev <- subset(r, class==7); sev$school_name <- NULL
+eig <- subset(r, class==8); eig$school_name <- NULL
+nin <- subset(r, class==9); nin$school_name <- NULL
+sixsev <- full_join(six, sev, by="ID_school")
+sixseveig <- full_join(sixsev, eig, by="ID_school")
+rr <- full_join(sixseveig, nin, by="ID_school")
+rm(six, sixsev, sixseveig, sev, eig, nin, r)
+rr$class.x <- NULL
+rr$class.y <- NULL
+rr$class.x.x <- NULL
+rr$class.y.y <- NULL
+names(rr) <- c("ID_school","num6","num7","num8","num9")
+rr <- full_join(rr, unique(r[1:2]), by="ID_school")
+# write.csv(rr, "~/Desktop/r.csv")
+
+Kaluga <- readxl::read_excel("~/Desktop/диплом/диплом_анализ/data/Kaluga_EGE_OGE.xlsx")
+
+rrkaluga <- full_join(Kaluga,rr, by="ID_school")
+
+write.csv(rrkaluga, "~/Desktop/rrkaluga.csv")
+```
+
+
